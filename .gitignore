@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Secrets — NEVER commit API keys or private keys
+config/api_keys.json
+config/certs/*.key
+.env
+.env.*
+
+# Personal runtime state — do not ship user memory
+memory/long_term.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log

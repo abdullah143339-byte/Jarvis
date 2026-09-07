@@ -720,6 +720,28 @@ class _BrowserSession:
         except Exception as e:
             return f"Could not get page text: {e}"
 
+    async def eval_js(self, script: str) -> str:
+        """Execute arbitrary JavaScript on the active page and return its string result.
+
+        Used by YouTube player control so real DOM state is read and mutated
+        (PLAY/PAUSE/SEEK/VOLUME/FULLSCREEN) — never blind keyboard guesses.
+        """
+        page = await self._get_page()
+        try:
+            value = await page.evaluate(script)
+            return str(value) if value is not None else ""
+        except Exception as e:
+            return f"JS_ERROR: {e}"
+
+    async def get_active_page_state(self) -> str:
+        """Return the active page's URL and title so callers can decide whether
+        a requested website is already open instead of opening another copy."""
+        page = await self._get_page()
+        try:
+            return f"{page.url}\n{await page.title()}"
+        except Exception as e:
+            return f"PAGE_STATE_ERROR: {e}"
+
     async def get_url(self) -> str:
         page = await self._get_page()
         return page.url
@@ -1029,6 +1051,10 @@ def browser_control(
             result = sess.run(sess.get_text())
         elif action == "get_url":
             result = sess.run(sess.get_url())
+        elif action == "get_active_page_state":
+            result = sess.run(sess.get_active_page_state())
+        elif action == "eval_js":
+            result = sess.run(sess.eval_js(params.get("script", "")))
         elif action == "press":
             result = sess.run(sess.press(params.get("key", "Enter")))
         elif action == "close_tab":

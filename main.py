@@ -188,14 +188,18 @@ TOOL_DECLARATIONS = [
     {
         "name": "youtube_video",
         "description": (
-            "Controls YouTube. Use for: playing videos, summarizing a video's content, "
-            "getting video info, or showing trending videos."
+            "Controls YouTube in Google Chrome. Use for ALL YouTube commands: playing/searching videos, "
+            "and REAL player control (pause, play, volume, fullscreen, seek, next, previous, comments). "
+            "The control action reads the actual player DOM before AND after so it can verify the result "
+            "and report an honest status."
         ),
         "parameters": {
             "type": "OBJECT",
             "properties": {
-                "action": {"type": "STRING", "description": "play | summarize | get_info | trending (default: play)"},
-                "query":  {"type": "STRING", "description": "Search query for play action"},
+                "action": {"type": "STRING", "description": "play | search | control | summarize | get_info | trending (default: play)"},
+                "sub_action": {"type": "STRING", "description": "For control only: pause | play | toggle | mute | unmute | volume_up | volume_down | set_volume | fullscreen | exit_fullscreen | next | previous | seek | stop | comments | get_state"},
+                "query":  {"type": "STRING", "description": "Search query for play/search action"},
+                "value":  {"type": "NUMBER", "description": "Value for set_volume (0-100) or seek (seconds/minutes)"},
                 "save":   {"type": "BOOLEAN", "description": "Save summary to Notepad (summarize only)"},
                 "region": {"type": "STRING", "description": "Country code for trending e.g. TR, US"},
                 "url":    {"type": "STRING", "description": "Video URL for get_info action"},
@@ -252,18 +256,18 @@ TOOL_DECLARATIONS = [
     {
         "name": "browser_control",
         "description": (
-            "Controls any web browser. Use for: opening websites, searching the web, "
-            "clicking elements, filling forms, scrolling, screenshots, navigation, any web-based task. "
-            "Simple open/search requests launch the user's own browser normally (their real profile "
-            "and logged-in accounts); interactive actions (click, type, fill_form...) attach an "
-            "automation browser. "
-            "Always pass the 'browser' parameter when the user specifies a browser (e.g. 'open in Edge', "
-            "'use Firefox', 'open Chrome'). Multiple browsers can run simultaneously."
+            "Controls web browsers. GOOGLE CHROME is the default and preferred browser — use browser='chrome' "
+            "unless the user explicitly asks for another browser. Use for: opening websites, searching the web, "
+            "clicking elements, filling forms, scrolling, screenshots, navigation, reading page state "
+            "(get_active_page_state, eval_js), any web-based task. "
+            "It reuses the user's real Chrome profile (logged-in accounts) and reuses existing tabs/sessions "
+            "instead of creating duplicates. "
+            "Always pass the 'browser' parameter when the user specifies a browser. Multiple browsers can run simultaneously."
         ),
         "parameters": {
             "type": "OBJECT",
             "properties": {
-                "action":      {"type": "STRING", "description": "go_to | search | click | type | scroll | fill_form | smart_click | smart_type | get_text | get_url | press | new_tab | close_tab | screenshot | back | forward | reload | switch | list_browsers | close | close_all"},
+                "action":      {"type": "STRING", "description": "go_to | search | click | type | scroll | fill_form | smart_click | smart_type | get_text | get_url | get_active_page_state | eval_js | press | new_tab | close_tab | screenshot | back | forward | reload | switch | list_browsers | close | close_all"},
                 "browser":     {"type": "STRING", "description": "Target browser: chrome | edge | firefox | opera | operagx | brave | vivaldi | safari. Omit to use the currently active browser."},
                 "url":         {"type": "STRING", "description": "URL for go_to / new_tab action"},
                 "query":       {"type": "STRING", "description": "Search query for search action"},
@@ -277,6 +281,7 @@ TOOL_DECLARATIONS = [
                 "path":        {"type": "STRING", "description": "Save path for screenshot"},
                 "incognito":   {"type": "BOOLEAN", "description": "Open in private/incognito mode"},
                 "clear_first": {"type": "BOOLEAN", "description": "Clear field before typing (default: true)"},
+                "script":      {"type": "STRING", "description": "JavaScript to run for eval_js action"},
             },
             "required": ["action"]
         }
@@ -707,7 +712,7 @@ class JarvisLive:
         # Identity injection — overrides any hardcoded name in prompt.txt
         _addr = (f"ADDRESS: Always call the user '{_user_name}'."
                  if _user_name
-                 else "ADDRESS: When speaking Turkish → always say \"efendim\". "
+                 else "ADDRESS: When speaking/replying in Pakistani Urdu → naturally say \"ji\" / \"sir ji\" / aap ka naam. "
                       "When speaking English → say \"sir\". Never mix languages.")
         identity_ctx = (
             f"[IDENTITY]\n"
