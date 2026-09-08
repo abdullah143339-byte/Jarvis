@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JARVIS — Live</title>
+<meta name="description" content="JARVIS — live voice AI assistant. Samajho, jawab do, kaam karo.">
+<style>
+  :root{
+    --bg:#04070e; --panel:#0a1120; --line:#1b2b4a; --txt:#dce8ff; --dim:#5f789e;
+    --cyan:#00e5ff; --green:#2bff88; --red:#ff4d6d; --amber:#ffc94d;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    background:radial-gradient(900px 500px at 50% -10%,#0d1e3a 0%,var(--bg) 55%);
+    color:var(--txt); font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+    display:flex; flex-direction:column; min-height:100vh;
+  }
+  header{
+    display:flex; align-items:center; gap:12px; padding:12px 18px;
+    border-bottom:1px solid var(--line); background:rgba(5,9,18,.7); backdrop-filter:blur(6px);
+    position:sticky; top:0; z-index:5;
+  }
+  .logo{font-family:"Courier New",monospace; font-weight:700; letter-spacing:.3em; font-size:20px; color:#fff; text-shadow:0 0 14px rgba(0,229,255,.4)}
+  .status{display:inline-flex; align-items:center; gap:6px; font-size:11.5px; color:var(--dim); letter-spacing:.08em; margin-left:6px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 9px var(--green)}
+  .dot.off{background:var(--red);box-shadow:0 0 9px var(--red)}
+  .spacer{flex:1}
+  .lang{display:flex; border:1px solid var(--line); border-radius:9px; overflow:hidden}
+  .lang button{background:var(--panel); color:var(--dim); border:none; padding:7px 13px; font-size:12.5px; cursor:pointer; font-weight:600}
+  .lang button.on{color:var(--cyan); background:rgba(0,229,255,.08)}
+  .lbl{font-size:12px; color:var(--dim); margin-right:10px}
+
+  main{flex:1; display:flex; flex-direction:column; max-width:860px; width:100%; margin:0 auto; padding:18px 16px 0}
+  #chat{flex:1; overflow-y:auto; padding:4px 2px 16px; scroll-behavior:smooth}
+  .msg{display:flex; margin-bottom:14px; gap:10px}
+  .msg .who{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+            font-family:"Courier New",monospace;font-weight:700;font-size:13px;flex:0 0 34px}
+  .msg.user{flex-direction:row-reverse}
+  .msg.user .who{background:rgba(43,255,136,.12); color:var(--green); border:1px solid rgba(43,255,136,.35)}
+  .msg.jarvis .who{background:rgba(0,229,255,.12); color:var(--cyan); border:1px solid rgba(0,229,255,.35)}
+  .bubble{max-width:78%; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:11px 14px;
+          font-size:15px; line-height:1.55; white-space:pre-wrap; word-break:break-word}
+  .msg.user .bubble{border-color:rgba(43,255,136,.25)}
+  .bubble a{color:var(--cyan)}
+  .cursor{display:inline-block;width:8px;height:16px;background:var(--cyan);vertical-align:-2px;margin-left:2px;animation:blink 1s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  .typing{color:var(--dim); font-size:13px; font-style:italic; padding:2px 6px}
+  .err{color:var(--red); font-size:13.5px}
+
+  footer{max-width:860px;width:100%;margin:0 auto;padding:12px 16px 18px}
+  .inrow{display:flex; gap:10px; align-items:stretch}
+  #inp{flex:1; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:13px 15px;
+       color:var(--txt); font-size:15px; outline:none; font-family:inherit}
+  #inp:focus{border-color:var(--cyan)}
+  .mic,.send{width:52px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--cyan);
+             font-size:19px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center}
+  .mic:hover{border-color:var(--cyan)}
+  .send{color:var(--green)}
+  .send:hover{border-color:var(--green)}
+  .mic.rec{background:rgba(255,77,109,.12); border-color:var(--red); color:var(--red); animation:glow 1.2s ease-in-out infinite}
+  @keyframes glow{50%{box-shadow:0 0 16px rgba(255,77,109,.35)}}
+  .hint{font-size:11.5px;color:var(--dim);margin-top:9px;text-align:center;letter-spacing:.02em}
+  .tts{background:none;border:1px solid var(--line);color:var(--dim);border-radius:8px;padding:6px 11px;font-size:12px;cursor:pointer}
+  .tts.on{color:var(--amber);border-color:var(--amber)}
+</style>
+</head>
+<body>
+  <header>
+    <span class="logo">JARVIS</span>
+    <span class="status"><span class="dot" id="netdot"></span><span id="netlbl">CONNECTING</span></span>
+    <span class="spacer"></span>
+    <button class="tts" id="ttsBtn" title="Voice replies">🔊 ON</button>
+    <span class="lbl">Zabaan</span>
+    <div class="lang" id="lang">
+      <button data-l="ur" class="on">اردو</button>
+      <button data-l="en">EN</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="chat">
+      <div class="msg jarvis">
+        <div class="who">J</div>
+        <div class="bubble">Ji! Main JARVIS hoon. Likho ya mic dabao — kuch bhi poochho, web pe live dhundo aur jawab doonga.</div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="inrow">
+      <button class="mic" id="mic" title="Voice input">🎤</button>
+      <input id="inp" type="text" placeholder="Type a message…" autocomplete="off">
+      <button class="send" id="send" title="Send">➤</button>
+    </div>
+    <div class="hint">PC control (files/apps/browser) sirf desktop JARVIS app run karne se hoga — ye web build voice + text + live web search deta hai.</div>
+    <div id="srUnsupported" style="display:none" class="hint" >⚠️ Is browser me mic support nahi — text use karein.</div>
+  </footer>
+
+<script>
+(function () {
+  const chat = document.getElementById("chat");
+  const inp = document.getElementById("inp");
+  const micBtn = document.getElementById("mic");
+  const sendBtn = document.getElementById("send");
+  const netDot = document.getElementById("netdot");
+  const netLbl = document.getElementById("netlbl");
+  const ttsBtn = document.getElementById("ttsBtn");
+  const langBtns = document.querySelectorAll("#lang button");
+
+  let lang = "ur";
+  let ttsOn = true;
+  let listening = false;
+  const history = [];
+
+  /* ── network status ─────────────────────────────── */
+  (async function ping() {
+    try {
+      const r = await fetch("/api/ping", { cache: "no-store" });
+      const j = await r.json();
+      netDot.classList.toggle("off", !j.online);
+      netLbl.textContent = j.online ? "SYSTEM ONLINE" : "OFFLINE";
+    } catch {
+      netDot.classList.add("off");
+      netLbl.textContent = "OFFLINE";
+    }
+  })();
+
+  /* ── lang toggle ─────────────────────────────────── */
+  langBtns.forEach((b) =>
+    b.addEventListener("click", () => {
+      lang = b.dataset.l;
+      langBtns.forEach((x) => x.classList.toggle("on", x === b));
+      const t = lang === "ur" ? "اردو" : "EN";
+      ttsBtn.textContent = ttsOn ? "🔊 ON" : "🔇 OFF";
+      addMsg("jarvis", lang === "ur"
+        ? "Ji, zabaan Urdu pe. Likho ya mic dabao."
+        : "Alright — English mode. Type or tap the mic.");
+    })
+  );
+
+  /* ── TTS ─────────────────────────────────────────── */
+  ttsBtn.addEventListener("click", () => {
+    ttsOn = !ttsOn;
+    ttsBtn.textContent = ttsOn ? "🔊 ON" : "🔇 OFF";
+    ttsBtn.classList.toggle("on", ttsOn);
+    if (!ttsOn) speechSynthesis.cancel();
+  });
+
+  let urVoice = null;
+  if ("speechSynthesis" in window) {
+    function pickVoice() {
+      const vs = speechSynthesis.getVoices();
+      urVoice = vs.find((v) => /ur/i.test(v.lang)) || vs.find((v) => /hi/i.test(v.lang)) || null;
+    }
+    pickVoice();
+    speechSynthesis.onvoiceschanged = pickVoice;
+  }
+
+  function speak(text) {
+    if (!ttsOn || !("speechSynthesis" in window)) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text.replace(/[*#`>·|_]/g, "").slice(0, 400));
+    u.lang = urVoice && lang === "ur" ? urVoice.lang : lang === "ur" ? "ur-PK" : "en-US";
+    if (urVoice && lang === "ur") u.voice = urVoice;
+    u.rate = 1.02;
+    speechSynthesis.speak(u);
+  }
+
+  /* ── chat UI ─────────────────────────────────────── */
+  function addMsg(who, text) {
+    const row = document.createElement("div");
+    row.className = "msg " + who;
+    row.innerHTML = '<div class="who">' + (who === "user" ? "&nbsp;" : "J") + "</div>" +
+      '<div class="bubble"></div>';
+    chat.appendChild(row);
+    const bubble = row.querySelector(".bubble");
+    let i = 0;
+    const full = text;
+    const step = 3;
+    const cursor = '<span class="cursor"></span>';
+    function type() {
+      i = Math.min(full.length, i + step);
+      bubble.innerHTML = escapeHtml(full.slice(0, i)) + cursor;
+      chat.scrollTop = chat.scrollHeight;
+      if (i < full.length) setTimeout(type, 12);
+      else { bubble.innerHTML = linkify(full); chat.scrollTop = chat.scrollHeight; }
+    }
+    type();
+    return row;
+  }
+
+  function typingHint(txt) {
+    const el = document.createElement("div");
+    el.className = "msg jarvis";
+    el.innerHTML = '<div class="who">J</div><div class="bubble typing">' + txt + "</div>";
+    chat.appendChild(el);
+    chat.scrollTop = chat.scrollHeight;
+    return el;
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function linkify(s) {
+    return escapeHtml(s).replace(
+      /(https?:\/\/[^\s)]+)/g,
+      '<a href="$1" target="_blank" rel="noopener">$1</a>'
+    );
+  }
+
+  /* ── sending ─────────────────────────────────────── */
+  async function send(text) {
+    text = (text || "").trim();
+    if (!text) return;
+    inp.value = "";
+    addMsg("user", text);
+    history.push({ role: "user", text });
+    const hint = typingHint("soch raha hoon…");
+    try {
+      const r = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: history, lang }),
+      });
+      const j = await r.json();
+      hint.remove();
+      if (!r.ok) throw new Error(j.error || "Server error " + r.status);
+      const reply = j.text || "(khali jawab)";
+      history.push({ role: "assistant", text: reply });
+      addMsg("jarvis", reply);
+      speak(reply);
+    } catch (e) {
+      hint.remove();
+      const el = document.createElement("div");
+      el.className = "msg jarvis";
+      el.innerHTML = '<div class="who">J</div><div class="bubble err">⚠️ ' + escapeHtml(e.message) + "</div>";
+      chat.appendChild(el);
+      chat.scrollTop = chat.scrollHeight;
+    }
+  }
+
+  sendBtn.addEventListener("click", () => send(inp.value));
+  inp.addEventListener("keydown", (e) => { if (e.key === "Enter") send(inp.value); });
+
+  /* ── voice input ─────────────────────────────────── */
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    micBtn.disabled = true;
+    micBtn.style.opacity = .35;
+    document.getElementById("srUnsupported").style.display = "block";
+  }
+  let rec = null;
+  micBtn.addEventListener("click", () => {
+    if (!SR) return;
+    if (listening) { try { rec.stop(); } catch {} return; }
+    rec = new SR();
+    rec.lang = lang === "ur" ? "ur-PK" : "en-US";
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+    let transcript = "";
+    rec.onresult = (ev) => {
+      transcript = "";
+      for (const res of ev.results) transcript += res[0].transcript;
+      inp.value = transcript;
+    };
+    rec.onerror = () => { micBtn.classList.remove("rec"); listening = false; };
+    rec.onend = () => {
+      micBtn.classList.remove("rec");
+      listening = false;
+      if (transcript && transcript.trim()) send(transcript);
+      transcript = "";
+    };
+    transcript = "";
+    inp.value = "";
+    listening = true;
+    micBtn.classList.add("rec");
+    micBtn.title = "Stop";
+    rec.start();
+  });
+
+  inp.addEventListener("focus", () => { if (rec) try { rec.stop(); } catch {} });
+})();
+</script>
+</body>
+</html>
