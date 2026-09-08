@@ -10,7 +10,9 @@ Install deps:  pip install fastapi "uvicorn[standard]" cryptography
 
 import asyncio
 import base64
+import datetime
 import hashlib
+import ipaddress
 import re
 import secrets
 import socket
@@ -39,6 +41,67 @@ BASE_DIR    = Path(__file__).resolve().parent.parent
 STATIC_DIR  = Path(__file__).parent / "static"
 PORT        = 8000
 MAX_UPLOAD_MB = 500
+
+CERTS_DIR  = BASE_DIR / "config" / "certs"
+SSL_KEY    = CERTS_DIR / "jarvis.key"
+SSL_CERT   = CERTS_DIR / "jarvis.crt"
+
+
+def _ensure_certs() -> None:
+    """Generate a fresh self-signed HTTPS pair if missing.
+
+    Certificates/keys are never committed to git — every machine
+    generates its own, so the private key never leaks publicly.
+    """
+    if SSL_KEY.exists() and SSL_CERT.exists():
+        return
+    try:
+        from cryptography import x509
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from cryptography.x509.oid import NameOID
+    except Exception:
+        print("[Dashboard] cryptography not installed — falling back to HTTP.")
+        return
+    try:
+        CERTS_DIR.mkdir(parents=True, exist_ok=True)
+        key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        ips = ["127.0.0.1"]
+        for info in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET):
+            ip = info[4][0]
+            if ip not in ips:
+                ips.append(ip)
+        name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "JARVIS")])
+        now = datetime.datetime.now(datetime.timezone.utc)
+        cert = (
+            x509.CertificateBuilder()
+            .subject_name(name)
+            .issuer_name(name)
+            .public_key(key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(now - datetime.timedelta(days=1))
+            .not_valid_after(now + datetime.timedelta(days=365))
+            .add_extension(
+                x509.SubjectAlternativeName(
+                    [x509.DNSName("localhost")]
+                    + [x509.IPAddress(ipaddress.ip_address(ip)) for ip in ips]
+                ),
+                critical=False,
+            )
+            .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
+            .sign(key, hashes.SHA256())
+        )
+        SSL_KEY.write_bytes(
+            key.private_bytes(
+                serialization.Encoding.PEM,
+                serialization.PrivateFormat.TraditionalOpenSSL,
+                serialization.NoEncryption(),
+            )
+        )
+        SSL_CERT.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
+        print("[Dashboard] Generated fresh self-signed HTTPS certificate.")
+    except Exception as exc:
+        print(f"[Dashboard] Cert generation failed ({exc}) — using HTTP.")
 
 
 def _make_uploads_dir() -> Path:
@@ -397,8 +460,8 @@ class DashboardServer:
 
     @staticmethod
     def _ssl_enabled() -> bool:
-        certs = BASE_DIR / "config" / "certs"
-        return (certs / "jarvis.key").exists() and (certs / "jarvis.crt").exists()
+        _ensure_certs()
+        return SSL_KEY.exists() and SSL_CERT.exists()
 
     def get_url(self) -> str:
         proto = "https" if self._ssl_enabled() else "http"

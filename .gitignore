@@ -8,6 +8,7 @@ venv/
 # Secrets — NEVER commit API keys or private keys
 config/api_keys.json
 config/certs/*.key
+config/certs/*.crt
 .env
 .env.*
 
