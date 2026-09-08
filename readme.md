@@ -1,7 +1,5 @@
-# ⚙️ MARK LI (51)
-### The Ultimate Cross-Platform Personal AI Assistant — By FatihMakes
-
-> 📺 **[Watch the full setup video on YouTube](https://www.youtube.com/@FatihMakes)**
+# ⚙️ JARVIS (Mark LI)
+### The Ultimate Cross-Platform Personal AI Assistant
 
 A real-time voice AI that can hear, see, understand, and control your computer — on any OS. Supports Windows, macOS, and Linux. Built on the Gemini Live API for native audio streaming, delivering zero subscriptions and total digital autonomy.
 
@@ -96,8 +94,8 @@ All three Live API upgrades degrade gracefully: if the preview API ever rejects 
 ## ⚡ Quick Start
 
 ```bash
-git clone https://github.com/FatihMakes/Mark-LI.git
-cd Mark-LI
+git clone https://github.com/abdullah143339-byte/Jarvis.git
+cd Jarvis
 pip install -r requirements.txt
 python main.py
 ```
@@ -173,5 +171,4 @@ Engineered by a developer building a real-world JARVIS-style assistant.
 
 | Platform | Link |
 | --- | --- |
-| YouTube | [@FatihMakes](https://www.youtube.com/@FatihMakes) |
-| Instagram | [@fatihmakes](https://www.instagram.com/fatihmakes) |
+| GitHub | [@abdullah143339-byte](https://github.com/abdullah143339-byte) |

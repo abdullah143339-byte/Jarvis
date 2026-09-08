@@ -14,6 +14,7 @@ config/certs/*.crt
 
 # Personal runtime state — do not ship user memory
 memory/long_term.json
+/prompt.txt
 
 # OS / editor
 .DS_Store
